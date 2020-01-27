@@ -1,0 +1,424 @@
+(add-hook 'json-mode-hook #'flycheck-mode)
+
+;;;;;;;;;;;;;;;;;;
+;; basic stuffs ;;
+;;;;;;;;;;;;;;;;;;
+
+(add-to-list 'load-path "~/.emacs.d/el-get/el-get")
+
+(unless (require 'el-get nil 'noerror)
+  (with-current-buffer
+      (url-retrieve-synchronously
+       "https://raw.githubusercontent.com/dimitri/el-get/master/el-get-install.el")
+    (goto-char (point-max))
+    (eval-print-last-sexp)))
+
+(add-to-list 'el-get-recipe-path "~/.emacs.d/el-get-user/recipes")
+(el-get 'sync)
+
+;; getting melpa packages!!
+(require 'package)
+(add-to-list 'package-archives
+             '("melpa" . "http://melpa.org/packages/") t)
+
+
+;; consertando a porra do acento
+(require 'iso-transl)
+
+;; quebra de linha
+(global-visual-line-mode t)
+
+;; font size
+(set-face-attribute 'default nil :height 80)
+
+;; menu,scroll and tool bar(s)
+(menu-bar-mode -1) 
+(toggle-scroll-bar -1) 
+(tool-bar-mode -1) 
+
+;; highlight parent matches
+(show-paren-mode 1)
+
+;; startup screen
+(defun my-after-init-hook ()
+  "Test."
+  (print command-line-args)
+  (when (= 1 (length command-line-args))
+    (setq initial-buffer-choice "~/Dropbox/MyTodo.org")))
+(add-hook 'after-init-hook 'my-after-init-hook)
+;;(setq inhibit-startup-message t)
+;(setq initial-buffer-choice "~/Dropbox/MyTodo.org")
+
+;; highlight line
+(global-hl-line-mode 1)
+
+(blink-cursor-mode 0)
+
+;; color
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(custom-enabled-themes (quote (tsdh-dark)))
+ '(inhibit-startup-screen t)
+ '(org-link-frame-setup
+   (quote
+    ((vm . vm-visit-folder-other-frame)
+     (vm-imap . vm-visit-imap-folder-other-frame)
+     (gnus . org-gnus-no-new-news)
+     (file . find-file)
+     (wl . wl-other-frame))))
+ '(package-selected-packages
+   (quote
+    (inf-clojure flymake-json fold-this csv-mode queue helm-google magit python auctex elpy el-get))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+
+;; auto insert to create template files
+(auto-insert-mode)  ;;; Adds hook to find-files-hook
+(setq auto-insert-directory "~/.mytemplates/") ;;; Or use custom, *NOTE* Trailing slash important
+(setq auto-insert-query nil) ;;; If you don't want to be prompted before insertion
+
+;; kill scratch buffer
+(kill-buffer "*scratch*")
+
+;; turn on abbrev mode
+(abbrev-mode 1)
+
+;; turn on cua-mode
+(cua-mode 1)
+
+(defun copy-line (arg)
+    "Copy lines (as many as prefix argument) in the kill ring.
+      Ease of use features:
+      - Move to start of next line.
+      - Appends the copy on sequential calls.
+      - Use newline as last char even on the last line of the buffer.
+      - If region is active, copy its lines."
+    (interactive "p")
+    (let ((beg (line-beginning-position))
+          (end (line-end-position arg)))
+      (when mark-active
+        (if (> (point) (mark))
+            (setq beg (save-excursion (goto-char (mark)) (line-beginning-position)))
+          (setq end (save-excursion (goto-char (mark)) (line-end-position)))))
+      (if (eq last-command 'copy-line)
+          (kill-append (buffer-substring beg end) (< end beg))
+        (kill-ring-save beg end)))
+    ;(kill-append "\n" nil)
+    (beginning-of-line (or (and arg (1+ arg)) 2))
+    (if (and arg (not (= 1 arg))) (message "%d lines copied" arg)))
+
+;; my keybinds
+
+(global-set-key (kbd "C-}") 'scroll-up-command)
+(global-set-key (kbd "C-{") 'scroll-down-command)
+
+(global-set-key (kbd "C-c l") 'copy-line)
+
+(global-set-key (kbd "C-c ;") 'comment-line)
+
+(global-set-key (kbd "<C-tab>") 'other-window)
+(global-set-key (kbd "<C-f4>") 'delete-window)
+
+(global-set-key (kbd "C-t") 'split-window-right)
+
+(global-set-key [(f6)] 'shrink-window-horizontally)
+(global-set-key [(f8)] 'enlarge-window-horizontally)
+
+;;;;;;;;;;;;;;;;;;;;;
+;; End Basic Stuff ;;
+;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;
+;; web stuff ;;
+;;;;;;;;;;;;;;;
+
+;; Web-Mode subtypes
+(setq web-mode-content-types-alist
+      '(("json" . "/some/path/.*\\.api\\'")
+	("xml"  . "/other/path/.*\\.api\\'")
+	("jsx"  . "/some/react/path/.*\\.js[x]?\\'")))
+
+;;;;;;;;;;;;;;;;;;;
+;; end web stuff ;;
+;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;
+;; clojure ;;
+;;;;;;;;;;;;;
+
+(add-hook 'clojure-mode-hook 'fci-mode)
+(add-hook 'clojure-mode-hook 'auto-highlight-symbol-mode)
+; not working
+(add-hook 'clojure-mode-hook 'eldoc-mode)
+
+(defun figwheel-repl ()
+  (interactive)
+  (inf-clojure "lein figwheel"))
+
+;;;;;;;;;;;;;;;;;
+;; end clojure ;;
+;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;
+;; elpy ;;
+;;;;;;;;;;
+
+(require 'package)
+(add-to-list 'package-archives
+             '("elpy" . "http://jorgenschaefer.github.io/packages/"))
+(package-initialize)
+
+(elpy-enable)
+
+;; test to find out
+(setq eldoc-idle-delay 1)
+
+;; make auto complete a little better
+(setq ac-modes (delq 'python-mode ac-modes))
+
+;;;;;;;;;;;;;;;;;;;;
+;;;; python stuff ;;
+;;;;;;;;;;;;;;;;;;;;
+
+;; python ruler at 80 collumn
+(require 'fill-column-indicator)
+(setq fci-rule-width 5)
+(setq fci-rule-color "darkblue")
+(setq fci-rule-column 91)
+(add-hook 'python-mode-hook 'fci-mode)
+(add-hook 'python-mode-hook 'auto-highlight-symbol-mode)
+
+(defun sanityinc/fci-enabled-p () (symbol-value 'fci-mode))
+
+(defvar sanityinc/fci-mode-suppressed nil)
+(make-variable-buffer-local 'sanityinc/fci-mode-suppressed)
+
+(defadvice popup-create (before suppress-fci-mode activate)
+  "Suspend fci-mode while popups are visible"
+  (let ((fci-enabled (sanityinc/fci-enabled-p)))
+    (when fci-enabled
+      (setq sanityinc/fci-mode-suppressed fci-enabled)
+      (turn-off-fci-mode))))
+
+(defadvice popup-delete (after restore-fci-mode activate)
+  "Restore fci-mode when all popups have closed"
+  (when (and sanityinc/fci-mode-suppressed
+	     (null popup-instances))
+    (setq sanityinc/fci-mode-suppressed nil)
+    (turn-on-fci-mode)))
+
+;; python header
+(define-auto-insert "\.py" "my-python-template.py")
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; end python stuff ;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;
+;; elpy-end ;;
+;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;
+;; latex stuff ;;
+;;;;;;;;;;;;;;;;;
+
+;; Turn on RefTeX in AUCTeX
+(add-hook 'LaTeX-mode-hook 'turn-on-reftex)
+;; Activate nice interface between RefTeX and AUCTeX
+(setq reftex-plug-into-AUCTeX t)
+
+;;;;;;;;;;;;;;;;;;;;;
+;; end latex stuff ;;
+;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; window navigation using wind move ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(global-set-key (kbd "C-c <left>")  'windmove-left)
+(global-set-key (kbd "C-c <right>") 'windmove-right)
+(global-set-key (kbd "C-c <up>")    'windmove-up)
+(global-set-key (kbd "C-c <down>")  'windmove-down)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; end window navigation ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;
+;; buffer-stack ;;
+;;;;;;;;;;;;;;;;;;
+
+(require 'buffer-stack)
+
+(global-set-key [(f10)] 'buffer-stack-bury)
+(global-set-key [(control f10)] 'buffer-stack-bury-and-kill)
+(global-set-key [(f9)] 'buffer-stack-up)
+(global-set-key [(f11)] 'buffer-stack-down)
+(global-set-key [(shift f10)] 'buffer-stack-bury-thru-all)
+(global-set-key [(shift f9)] 'buffer-stack-down-thru-all)
+(global-set-key [(shift f11)] 'buffer-stack-up-thru-all)
+(global-set-key [(control f12)] 'buffer-stack-untrack)
+
+(setq buffer-stack-untracked '("*helm find files*" "*Messages*" "*Helm Swoop*" "*helm-mode-kill-buffer*" "*Completions*" "*helm google*" "*idle*" ".buffer-timer.el" ".buffer-timer-log" ".buffer-timer" "*helm-mode-completion-at-point* *nrepl-server clojure/*"))
+
+;;;;;;;;;;;;;;;;;;;;;;
+;; end buffer-stack ;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;
+;; org configs ;;
+;;;;;;;;;;;;;;;;;
+
+;(eval-after-load 'org
+;  '(define-key LaTeX-mode-map [(tab)] 'outline-cycle))
+
+'(org-agenda-files (quote ("~/Dropbox/MyTodo.org")))
+
+(global-set-key (kbd "C-c a") 'org-agenda)
+
+(setq org-todo-keywords
+      '((sequence "TODO" "VERIFY" "|" "DONE" "DELEGATED")))
+
+(require 'org-bullets)
+(add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+
+;; org header
+(define-auto-insert "\.org" "my-org-template.org")
+
+;; org agenda
+(setq org-agenda-include-diary 1)
+(setq org-agenda-span 14)
+
+(add-hook 'org-mode-hook 'abbrev-mode)
+
+;; org TODO's keywords
+(setq org-todo-keyword-faces
+      '(("TODO" . "red") ("VERIFY" . "yellow")
+        ("DELEGATED" . "green") ("DONE" . "green")))
+
+;; Making DONE with timestamp
+(setq org-log-done 'time)
+
+;;;;;;;;;;;;;;;;;;;;;
+;; end org configs ;;
+;;;;;;;;;;;;;;;;;;;;;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; helm stuff ;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;(require 'helm-config)
+
+;;helm-find-files keybind
+(global-set-key (kbd "C-x C-f") 'helm-find-files)
+
+;; helm-swoop use as isearch
+(global-set-key (kbd "C-s") 'helm-swoop)
+
+;; helm-google (instaled via melpa)
+(global-set-key (kbd "C-c /") 'helm-google)
+
+;;;;;;;;;;;;;;;;;;;;
+;; end helm stuff ;;
+;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;
+;; buffer timer ;;
+;;;;;;;;;;;;;;;;;;
+
+;; (require 'buffer-timer)
+
+;; ; Example list of titles and regexps to group by.  This
+;; (setq buffer-timer-regexp-master-list
+;;       '(
+;; 	("idle" . 
+;; 	 (("generic" .			  "^\\*idle\\*")
+;; 	  ("generic2" .			  "^\\*idle-2\\*")
+;; 	  ("minibuf" .                        "^ \\*Minibuf-.*")))
+;; 	("personal" .
+;; 	 (("reading" .                        "/Dropbox/Book/")))
+;; 	("work" .
+;; 	 (("Bovexo" .
+;; 	   (("time_spent" .                        "/Dropbox/AOC/Bovexo/")))
+;; 	  ("pdf_maker" .
+;; 	   (("time_spent" .            "/AOC/pdfmaker"))))
+;; 	 )))
+
+;;;;;;;;;;;;;;;
+;; old stuff ;;
+;;;;;;;;;;;;;;;
+
+;; ;;pandoc mode
+;; (add-hook 'markdown-mode-hook 'pandoc-mode)
+;; ;; clipboard differs from kill ring
+;; (setq save-interprogram-paste-before-kill t)
+					;
+;; ;; auto-correct for text - flyspell
+;; (require 'flyspell-correct-ido)
+;; (define-key flyspell-mode-map (kbd "C-;") 'flyspell-correct-previous-word-generic)
+					;
+;; ;; get rid of annoyance ctrl backspace
+;; (defun my-delete-word (arg)
+;;   "Delete characters forward until encountering the end of a word.
+;; With argument, do this that many times.
+;; This command does not push text to `kill-ring'."
+;;   (interactive "p")
+;;   (delete-region
+;;    (point)
+;;    (progn
+;;      (forward-word arg)
+;;      (point))))
+					;
+;; (defun my-backward-delete-word (arg)
+;;   "Delete characters backward until encountering the beginning of a word.
+;; With argument, do this that many times.
+;; This command does not push text to `kill-ring'."
+;;   (interactive "p")
+;;   (my-delete-word (- arg)))
+					;
+;; (defun my-delete-line ()
+;;   "Delete text from current position to end of line char.
+;; This command does not push text to `kill-ring'."
+;;   (interactive)
+;;   (delete-region
+;;    (point)
+;;    (progn (end-of-line 1) (point)))
+;;   (delete-char 1))
+					;
+;; (defun my-delete-line-backward ()
+;;   "Delete text between the beginning of the line to the cursor position.
+;; This command does not push text to `kill-ring'."
+;;   (interactive)
+;;   (let (p1 p2)
+;;     (setq p1 (point))
+;;     (beginning-of-line 1)
+;;     (setq p2 (point))
+;;     (delete-region p1 p2)))
+					;
+;; ; bind them to emacs's default shortcut keys:
+;; (global-set-key (kbd "C-?") 'help-command)
+;; (global-set-key (kbd "M-?") 'mark-paragraph)
+;; (global-set-key (kbd "C-h") 'backward-kill-word)
+;; (global-set-key (kbd "M-h") 'delete-backward-char)
+					;
+;; (global-set-key (kbd "C-S-k") 'my-delete-line-backward) ; Ctrl+Shift+k
+;; (global-set-key (kbd "C-k") 'my-delete-line)
+;; (global-set-key (kbd "M-d") 'my-delete-word)
+;; (global-set-key (kbd "<C-backspace>") 'my-backward-delete-word
+					;
+;;;;;;;;;;;;;;;;;;;
+;; end old stuff ;;
+;;;;;;;;;;;;;;;;;;;
